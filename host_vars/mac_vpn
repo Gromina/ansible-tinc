@@ -1,0 +1,4 @@
+---
+
+physical_ip: "{{ ansible_en0.ipv4[0].address }}"
+etc_path: /usr/local/etc

@@ -116,3 +116,8 @@ Note that removing hosts from the VPN will result in orphaned tinc hosts files a
 ## Running Multiple VPNs
 
 This playbook does not support multiple VPNs but it could be easily extended.
+
+
+
+ansible -i hosts nas_vpn -m setup -a "filter=*"
+

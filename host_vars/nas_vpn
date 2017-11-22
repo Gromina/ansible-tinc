@@ -1,0 +1,3 @@
+---
+
+physical_ip: "{{ ansible_enx001e06318604.ipv4.address }}"

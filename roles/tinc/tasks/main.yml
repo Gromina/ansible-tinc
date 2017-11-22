@@ -1,4 +1,8 @@
 ---
+# brew install tinc
+# brew install brew install tuntap
+# https://github.com/Gromina/kites-tinc
+# https://www.digitalocean.com/community/tutorials/how-to-use-ansible-and-tinc-vpn-to-secure-your-server-infrastructure
 
 - name: install epel-release (redhat)
   yum: >
@@ -14,7 +18,7 @@
 - name: create tinc systemd service file (redhat)
   template: >
     src=tinc.service.j2
-    dest=/etc/systemd/system/tinc.service
+    dest="{{etc_path}}/systemd/system/tinc.service"
   register: tinc_service_file
   when: (ansible_os_family == "RedHat" and ansible_distribution_major_version == "7")
 
@@ -24,28 +28,28 @@
 
 - name: ensure tinc netname directory exists
   file: >
-    path=/etc/tinc/{{ netname }}/hosts
+    path="{{etc_path}}/tinc/{{ netname }}/hosts"
     recurse=True
     state=directory
 
 - name: create /etc/tinc/nets.boot file from template
   template: >
     src=nets.boot.j2
-    dest=/etc/tinc/nets.boot
+    dest="{{etc_path}}/tinc/nets.boot"
   notify:
     - restart tinc
 
 - name: ensure tinc.conf contains connection to all other nodes
   template: >
     src=tinc.conf.j2
-    dest=/etc/tinc/{{ netname }}/tinc.conf
+    dest="{{etc_path}}/tinc/{{ netname }}/tinc.conf"
   notify:
     - reload tinc
 
 - name: create tinc-up file
   template: >
     src=tinc-up.j2
-    dest=/etc/tinc/{{ netname }}/tinc-up
+    dest="{{etc_path}}/tinc/{{ netname }}/tinc-up"
     mode=0755
   notify:
     - restart tinc
@@ -53,14 +57,14 @@
 - name: create tinc-down file
   template: >
     src=tinc-down.j2
-    dest=/etc/tinc/{{ netname }}/tinc-down
+    dest="{{etc_path}}/tinc/{{ netname }}/tinc-down"
     mode=0755
   notify:
     - restart tinc
 
 - name: ensure tinc hosts file binds to physical ip address
   lineinfile: >
-    dest=/etc/tinc/{{ netname }}/hosts/{{ inventory_hostname }}
+    dest="{{etc_path}}/tinc/{{ netname }}/hosts/{{ inventory_hostname }}"
     line="Address = {{ physical_ip }}"
     create=yes
   notify:
@@ -68,34 +72,34 @@
 
 - name: ensure subnet ip address is properly set in tinc host file
   lineinfile: >
-    dest=/etc/tinc/{{ netname }}/hosts/{{ inventory_hostname }}
+    dest="{{etc_path}}/tinc/{{ netname }}/hosts/{{ inventory_hostname }}"
     line="Subnet = {{ vpn_ip }}/{{ vpn_subnet_cidr_netmask }}"
     create=yes
   notify:
     - restart tinc
 
 - name: check whether /etc/tinc/netname/hosts/inventory_hostname contains "-----END RSA PUBLIC KEY-----"
-  command: awk '/^-----END RSA PUBLIC KEY-----$/'  /etc/tinc/{{ netname }}/hosts/{{ inventory_hostname }}
+  command: "awk '/^-----END RSA PUBLIC KEY-----$/'  {{etc_path}}/tinc/{{ netname }}/hosts/{{ inventory_hostname }}"
   changed_when: "public_key.stdout != '-----END RSA PUBLIC KEY-----'"
   register: public_key
 
 # this is necessary because the public key will not be generated (non-interactively) if the private key already exists
 - name: delete private key and regenerate keypair if public key is absent from tinc hosts file
   file: >
-    path=/etc/tinc/{{ netname }}/rsa_key.priv
+    path="{{etc_path}}/tinc/{{ netname }}/rsa_key.priv"
     state=absent
   when: public_key.changed
 
 - name: create tinc private key (and append public key to tincd hosts file)
-  shell: tincd -n {{ netname }} -K4096
+  shell: "tincd -n {{ netname }} -K4096"
   args:
-    creates: /etc/tinc/{{ netname }}/rsa_key.priv
+    creates: "{{etc_path}}/tinc/{{ netname }}/rsa_key.priv"
   notify:
     - restart tinc
 
 - name: fetch tinc hosts file after key creation
   fetch: >
-    src=/etc/tinc/{{ netname }}/hosts/{{ inventory_hostname }}
+    src="{{etc_path}}/tinc/{{ netname }}/hosts/{{ inventory_hostname }}"
     dest=fetch/{{ inventory_hostname }}
     flat=yes
   notify:
@@ -104,7 +108,7 @@
 - name: sync the fetched tinc hosts files on each host
   synchronize: >
     src=fetch/
-    dest=/etc/tinc/{{ netname }}/hosts/
+    dest="{{etc_path}}/tinc/{{ netname }}/hosts/"
   notify:
     - reload tinc
 
@@ -117,8 +121,9 @@
     enabled=yes
     state=started
     pattern=tincd -n {{ netname }}
+  when: ansible_distribution != "MacOSX"
 
 - name: add nodes to /etc/hosts (ansible_inventory resolves to vpn_ip)
-  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].vpn_ip }} {{item}}" state=present
-  when: hostvars[item].vpn_ip is defined
+  lineinfile: dest="{{etc_path}}/hosts" regexp='.*{{ item }}$' line="{{ hostvars[item].vpn_ip }} {{item}}" state=present
+  when: hostvars[item].vpn_ip is defined and ansible_distribution != "MacOSX"
   with_items: "{{ play_hosts }}"

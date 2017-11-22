@@ -1,4 +1,11 @@
 [vpn]
+head_vpn      vpn_ip=10.0.0.1   ansible_host=88.198.110.93
+sweetie_vpn   vpn_ip=10.0.0.7   ansible_host=192.168.88.194
+nas_vpn       vpn_ip=10.0.0.71  ansible_host=192.168.88.134
+mac_vpn       vpn_ip=10.0.0.3   ansible_host=localhost      ansible_connection=local
+
 
 
 [removevpn]
+
+

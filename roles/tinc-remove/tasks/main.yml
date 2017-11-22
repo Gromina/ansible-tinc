@@ -9,10 +9,10 @@
 
 - name: delete tinc netname directory
   file: >
-    path=/etc/tinc/{{ netname }}
+    path="{{etc_path}}/tinc/{{ netname }}"
     state=absent
 
 - name: delete nets.boot
   file: >
-    path=/etc/tinc/nets.boot
+    path="{{etc_path}}/tinc/nets.boot"
     state=absent

@@ -4,8 +4,10 @@
   service: >
     name=tinc
     state=restarted
+  when: ansible_distribution == "Debian"
 
 - name: reload tinc
   service: >
     name=tinc
     state=reloaded
+  when: ansible_distribution == "Debian"
